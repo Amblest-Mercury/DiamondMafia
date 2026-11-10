@@ -37,6 +37,10 @@
   const chats = { public: [], mafia: [], ghost: [] }; let tab = 'public'; const unread = { public: 0, mafia: 0, ghost: 0 };
   try { session = JSON.parse(store.get('mv_session') || 'null'); } catch { }
   function send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
+  // ----- phone layout: a body class drives the compact HUD
+  const mobileMQ = matchMedia('(max-width:820px)'), coarseMQ = matchMedia('(pointer:coarse)');
+  function applyMobile() { const m = mobileMQ.matches || (coarseMQ.matches && innerWidth < 1100); document.body.classList.toggle('mobile', m); document.body.classList.toggle('landscape', m && innerWidth > innerHeight); window.IS_MOBILE = m; }
+  applyMobile(); addEventListener('resize', applyMobile); addEventListener('orientationchange', applyMobile);
   World.send = send;
   World.onToast = t => toast(t);
   // ----- things near you you can interact with (press E for the first one)
@@ -68,7 +72,14 @@
   $('tagSend').onclick = sendTag; $('tagX').onclick = closeTag; $('tagVote').onclick = () => { if (tagId) send({ type: 'vote', target: tagId }); SFX.vote(); closeTag(); };
   $('tagIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendTag(); if (e.key === 'Escape') closeTag(); });
   for (const b of $('camBtns').querySelectorAll('button')) b.onclick = () => { World.setCam(b.dataset.m); hideViewTip(); };
-  World.onCam = m => { for (const b of $('camBtns').querySelectorAll('button')) b.classList.toggle('on', b.dataset.m === m); };
+  const CAMS = [['chase', '🎥', 'Chase'], ['eye', '👁', 'Eye'], ['top', '🛰', 'Overview']];
+  $('camFab').onclick = () => { const i = CAMS.findIndex(c => c[0] === World.camMode); const n = CAMS[(i + 1) % 3]; World.setCam(n[0]); hideViewTip(); };
+  $('btnMenu').onclick = () => { $('menuSheet').classList.toggle('hidden'); $('mAlive').textContent = S ? '👥 ' + S.players.filter(p => p.alive).length + ' / ' + S.players.length + ' alive' : ''; };
+  $('mSound').onclick = () => $('btnMute').click(); $('mJournal').onclick = () => { $('menuSheet').classList.add('hidden'); $('btnJournal').click(); };
+  const tickerEl = $('ticker');
+  function ticker(m) { if (chatOpen || !S || S.phase === 'lobby') return; const d = document.createElement('div'); d.className = 'tk'; d.innerHTML = m.sys ? esc(m.text) : '<b>' + esc(m.name) + ':</b> ' + esc(m.text); tickerEl.appendChild(d); while (tickerEl.children.length > 3) tickerEl.firstChild.remove(); setTimeout(() => d.remove(), 7200); }
+  World.onCam = m => { const c = CAMS.find(x => x[0] === m); if (c) { $('camFabIcon').textContent = c[1]; $('camFabTxt').textContent = c[2]; } World.onCam0 && World.onCam0(m); };
+  World.onCam0 = m => { for (const b of $('camBtns').querySelectorAll('button')) b.classList.toggle('on', b.dataset.m === m); };
   function connect() {
     ws = new WebSocket(window.MAFIA_SERVER || ((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host));
     ws.onopen = () => { $('conn').classList.add('hidden'); if (session) send({ type: 'rejoin', code: session.code, token: session.token }); };
@@ -165,6 +176,7 @@
     if (m.ch === tab) { const box = $('msgs'); const near = box.scrollHeight - box.scrollTop - box.clientHeight < 80; box.insertAdjacentHTML('beforeend', msgHtml(m)); if (near || m.from === (S && S.you.id)) box.scrollTop = box.scrollHeight; }
     else { unread[m.ch]++; renderTabs(); }
     if (m.from && m.ch !== 'ghost') { World.bubble(m.from, m.text); } else if (m.from && S && S.god) World.bubble(m.from, m.text);
+    if (m.ch === 'public') ticker(m);
     if (m.from !== (S && S.you.id)) { SFX.pop(); if (!chatOpen && m.ch === tab) { chatUnread++; for (const id of ['chatBadge', 'pillBadge']) { $(id).classList.remove('hidden'); $(id).textContent = chatUnread; } } }
     
   }
@@ -172,7 +184,7 @@
   // ----- show / hide chat (it can cover the village, so hiding it is obvious: a button in the panel, a button on the top bar, a pill, and the H key)
   let chatUnread = 0, chatOpen = true;
   function setChat(open, remember = true) {
-    chatOpen = open; $('chatPanel').classList.toggle('min', !open); $('chatPill').classList.toggle('hidden', open || !S || S.phase === 'lobby');
+    chatOpen = open; $('chatPanel').classList.toggle('min', !open); document.body.classList.toggle('chatOpen', open); $('chatPill').classList.toggle('hidden', open || !S || S.phase === 'lobby');
     if (open) { chatUnread = 0; const box = $('msgs'); box.scrollTop = box.scrollHeight; }
     for (const id of ['chatBadge', 'pillBadge']) { $(id).classList.toggle('hidden', !chatUnread); $(id).textContent = chatUnread; }
     if (remember) store.set('mv_chat', open ? '1' : '0');
@@ -225,7 +237,7 @@
     return ['🏘', '', ''];
   }
   let viewTipDone = false;
-  function hideViewTip() { $('viewTip').classList.add('hidden'); $('camBtns').classList.remove('pulse'); }
+  function hideViewTip() { $('viewTip').classList.add('hidden'); $('camBtns').classList.remove('pulse'); $('camFab').classList.remove('pulse'); }
   function onState(s) {
     prev = S; S = s; myId = s.you.id;
     endAt = Date.now() + (s.left < 0 ? 1e9 : s.left); totalMs = s.total > 0 ? s.total : 1;
@@ -234,7 +246,7 @@
       World.setState(s, null); return;
     }
     showScreen('hud');
-    if (!viewTipDone) { viewTipDone = true; $('viewTip').classList.remove('hidden'); $('camBtns').classList.add('pulse'); setTimeout(hideViewTip, 14000); }
+    if (!viewTipDone) { viewTipDone = true; $('viewTip').classList.remove('hidden'); $('camBtns').classList.add('pulse'); $('camFab').classList.add('pulse'); setTimeout(hideViewTip, 14000); }
     $('chatPill').classList.toggle('hidden', chatOpen);
     const newPhase = s.phaseId !== lastPhaseId;
     const pv = prev && prev.phase !== 'lobby' ? prev : null;
@@ -286,6 +298,7 @@
     return `<button class="pick ${opts.cls || ''} ${opts.sel ? 'sel' : ''}" data-id="${p.id}"><i style="background:${p.look.color}"></i>${esc(p.name)}${opts.n ? `<span class="n">${opts.n}</span>` : ''}</button>`;
   }
   function bind(rootSel, fn) { for (const b of $('actions').querySelectorAll(rootSel)) b.onclick = () => { SFX.click(); fn(b.dataset.id, b); }; }
+  let actOpen = false;
   function renderActions() {
     const s = S, me = s.you, A = $('actions'); let html = '', mode = null;
     const alive = s.players.filter(p => p.alive), others = alive.filter(p => p.id !== me.id);
@@ -331,6 +344,10 @@
     }
     A.innerHTML = html;
     World.mode = mode;
+    if (window.IS_MOBILE) {
+      const ab = A.querySelector('.abox'), h4 = ab && ab.querySelector('h4');
+      if (ab && h4) { if (actOpen || ph === 'vote' || ph === 'revote' || (ph === 'nightActions' && role === 'mafia')) ab.classList.add('open'); h4.onclick = () => { actOpen = !actOpen; ab.classList.toggle('open', actOpen); }; }
+    }
     const rdy = $('rdy'); if (rdy) rdy.onclick = () => { send({ type: 'ready' }); SFX.click(); };
     const abs = $('abs'); if (abs) abs.onclick = () => { send({ type: 'vote', target: 'abstain' }); SFX.click(); };
     if (ph === 'day' || ph === 'dawn') bind('.pick', id => openTag(id));

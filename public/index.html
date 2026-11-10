@@ -68,8 +68,12 @@
     <div id="camBtns" class="chip"><span class="lbl">📷 VIEW</span><button data-m="eye" title="Eye view (2)">👁 Eye</button><button data-m="chase" class="on" title="Chase view (1)">🎥 Chase</button><button data-m="top" title="Overview (3)">🛰 Overview</button></div>
     <button id="btnMute" class="chip btnchip" title="Sound">🔊</button>
     <button id="btnJournal" class="chip btnchip" title="Your journal">📓</button>
+    <button id="btnMenu" class="chip btnchip menuT" title="Menu">⋯</button>
     <button id="btnChatToggle" class="chip btnchip chatT" title="Show / hide chat (H)">💬 Chat<span id="chatBadge" class="badge hidden"></span></button>
   </div>
+  <div id="menuSheet" class="hidden"><button id="mSound" class="btn small">🔊 Sound</button><button id="mJournal" class="btn small">📓 Journal</button><div id="mAlive"></div></div>
+  <div id="ticker"></div>
+  <button id="camFab" title="Change camera view"><span id="camFabIcon">🎥</span><small id="camFabTxt">Chase</small></button>
   <div id="banner" class="banner"></div>
   <div id="viewTip" class="hidden">👆 Change your camera here! &nbsp;<b>1</b> Chase · <b>2</b> Eye · <b>3</b> Overview</div>
   <button id="chatPill" class="hidden">💬 Show chat<span id="pillBadge" class="badge hidden"></span></button>

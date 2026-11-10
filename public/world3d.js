@@ -27,7 +27,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0xbfe4ff, 0.0075);
 const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 700);
-function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+function resize() { renderer.setSize(innerWidth, innerHeight, false); const a = innerWidth / innerHeight; camera.aspect = a; camera.fov = a < .6 ? 82 : a < .8 ? 74 : a < 1 ? 67 : 62; camera.updateProjectionMatrix(); }   // narrower screens get a wider lens so you see more
 addEventListener('resize', resize); resize();
 
 // sky dome
@@ -466,7 +466,7 @@ const keys = {}; let joy = { x: 0, y: 0 };
 const cam = { mode: 'chase', yaw: 0, pitch: .28, dist: 4.6, eyeUp: -.05, topYaw: .6, topDist: 46, topPitch: .95, lastDrag: -99, cutLook: null, pos: new THREE.Vector3(0, 5, 20), look: new THREE.Vector3(), snap: true };
 function myEnt() { return World.S ? ents[World.S.you.id] : null; }
 function isGodView() { return !World.S || World.S.god || World.S.you.watcher || !World.inGame; }
-World.setCam = m => { cam.mode = m; World.camMode = m; if (m === 'chase') cam.pitch = .28; if (m === 'eye') cam.eyeUp = myEnt() && myEnt().lieT > .5 ? .35 : -.05; cam.snap = true; World.onCam && World.onCam(m); };
+World.setCam = m => { cam.mode = m; World.camMode = m; const por = innerWidth / innerHeight < .8; if (m === 'chase') { cam.pitch = por ? .38 : .28; cam.dist = por ? 6.4 : Math.max(cam.dist, 4.6); } if (m === 'top') cam.topDist = por ? 66 : Math.max(cam.topDist, 46); if (m === 'eye') cam.eyeUp = myEnt() && myEnt().lieT > .5 ? .35 : -.05; cam.snap = true; World.onCam && World.onCam(m); };
 addEventListener('keydown', ev => { if (/INPUT|TEXTAREA/.test(ev.target.tagName)) return; keys[ev.code] = true; if (ev.code === 'Digit1') World.setCam('chase'); if (ev.code === 'Digit2') World.setCam('eye'); if (ev.code === 'Digit3') World.setCam('top'); if (ev.code === 'KeyC') World.setCam(cam.mode === 'chase' ? 'eye' : cam.mode === 'eye' ? 'top' : 'chase'); if (['Space', 'ArrowUp', 'ArrowDown'].includes(ev.code)) ev.preventDefault(); });
 addEventListener('keyup', ev => { keys[ev.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
@@ -697,7 +697,7 @@ function updateEnts(dt, night) {
           me.path.length = 0;
           const cy = cam.mode === 'top' ? cam.topYaw + Math.PI : cam.yaw; const fx_ = Math.sin(cy), fz_ = Math.cos(cy), rx_ = -Math.cos(cy), rz_ = Math.sin(cy);
           let dx = fx_ * f + rx_ * r, dz = fz_ * f + rz_ * r; const m = Math.hypot(dx, dz) || 1; dx /= m; dz /= m;
-          const run = keys.ShiftLeft || keys.ShiftRight; speed = run ? 5.6 : 3.2; ch.running = run;
+          const run = keys.ShiftLeft || keys.ShiftRight || Math.hypot(joy.x, joy.y) > .85; speed = run ? 5.6 : 3.2; ch.running = run;
           pos.x += dx * speed * dt; pos.z += dz * speed * dt; collide(pos); e.yaw = Math.atan2(dx, dz); moving = true;
         } else if (me.path.length) {   // click-to-move
           const w = me.path[0], dx = w.x - pos.x, dz = w.z - pos.z, d = Math.hypot(dx, dz);
