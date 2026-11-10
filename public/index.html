@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Mafia: The Village</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Bangers&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<!-- HOME -->
+<section id="home" class="screen">
+  <div class="card hero">
+    <div class="logo"><span class="knife">🔪</span><h1>MAFIA</h1><div class="sub">THE VILLAGE</div></div>
+    <p class="tag">Everyone has a house. Someone is hiding a knife.</p>
+    <input id="name" maxlength="14" placeholder="Your name" autocomplete="off">
+    <div class="row two">
+      <button id="btnCreate" class="btn primary">🏠 Create Room</button>
+      <button id="btnJoinShow" class="btn">🔑 Join Room</button>
+    </div>
+    <div id="createOpts" class="panel hidden">
+      <label>Villagers (total): <b id="sizeV">8</b></label>
+      <input id="size" type="range" min="4" max="16" value="8">
+      <label>Pace</label>
+      <div class="seg" id="paceSeg"><button data-v="relaxed">Relaxed</button><button data-v="normal" class="on">Normal</button><button data-v="fast">Fast</button></div>
+      <label class="chk"><input type="checkbox" id="watch"> <span>I'm just watching (all-NPC game)</span></label>
+      <button id="btnCreateGo" class="btn primary wide">Build the village ➜</button>
+    </div>
+    <div id="joinOpts" class="panel hidden">
+      <input id="code" maxlength="4" placeholder="ROOM CODE" autocomplete="off" style="text-transform:uppercase;letter-spacing:.4em;text-align:center;font-size:1.6rem">
+      <button id="btnJoinGo" class="btn primary wide">Enter the village ➜</button>
+    </div>
+    <div id="homeErr" class="err"></div>
+  </div>
+</section>
+
+<!-- LOBBY -->
+<section id="lobby" class="screen hidden">
+  <div class="card lobbyCard">
+    <div class="codeBox"><span>ROOM CODE</span><b id="lobCode">----</b><button id="btnCopy" class="btn small">Copy invite</button></div>
+    <div id="lanLink" class="lan"></div>
+    <div id="slots" class="slots"></div>
+    <div id="hostCtl" class="panel">
+      <label>Villagers: <b id="lobSizeV">8</b> &nbsp; <small>(empty seats are filled with NPCs)</small></label>
+      <input id="lobSize" type="range" min="4" max="16" value="8">
+      <label>Discussion time: <b id="lobDayV">90s</b></label><input id="lobDay" type="range" min="30" max="300" step="15" value="90">
+      <div class="row two">
+        <div><label>Mafia: <b id="lobMafiaV">auto</b></label><input id="lobMafia" type="range" min="0" max="5" value="0"></div>
+        <div><label>Pace</label><div class="seg" id="lobPace"><button data-v="relaxed">Relaxed</button><button data-v="normal">Normal</button><button data-v="fast">Fast</button></div></div>
+      </div>
+      <button id="btnStart" class="btn primary wide">▶ Start Game</button>
+    </div>
+    <div id="guestInfo" class="muted hidden">Waiting for the host to start…</div>
+    <button id="btnLeave" class="btn ghost small">Leave</button>
+  </div>
+</section>
+
+<!-- HUD -->
+<section id="hud" class="hidden">
+  <div id="topbar">
+    <div id="phaseBox"><div id="phaseIcon">☀️</div><div><div id="phaseTitle">Day 1</div><div id="phaseSub">Discussion</div></div></div>
+    <div id="timerWrap"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="tr"/><circle id="tring" cx="22" cy="22" r="19" class="tf"/></svg><span id="timerTxt">0</span></div>
+    <div id="roleChip" class="chip" title="Your secret role"></div>
+    <div id="aliveChip" class="chip"></div>
+    <div id="camBtns" class="chip"><span class="lbl">📷 VIEW</span><button data-m="eye" title="Eye view (2)">👁 Eye</button><button data-m="chase" class="on" title="Chase view (1)">🎥 Chase</button><button data-m="top" title="Overview (3)">🛰 Overview</button></div>
+    <button id="btnMute" class="chip btnchip" title="Sound">🔊</button>
+    <button id="btnJournal" class="chip btnchip" title="Your journal">📓</button>
+    <button id="btnChatToggle" class="chip btnchip chatT" title="Show / hide chat (H)">💬 Chat<span id="chatBadge" class="badge hidden"></span></button>
+  </div>
+  <div id="banner" class="banner"></div>
+  <div id="viewTip" class="hidden">👆 Change your camera here! &nbsp;<b>1</b> Chase · <b>2</b> Eye · <b>3</b> Overview</div>
+  <button id="chatPill" class="hidden">💬 Show chat<span id="pillBadge" class="badge hidden"></span></button>
+  <div id="help">WASD move · Shift run · drag to look · scroll to zoom · 1 Chase · 2 Eye · 3 Overview</div>
+  <div id="interact"></div>
+  <div id="actions"></div>
+  <div id="tagBox" class="hidden"><div class="th">💬 Say something to <b id="tagName"></b></div><input id="tagIn" maxlength="180" placeholder="e.g. where were you last night?" autocomplete="off"><div class="tr"><button id="tagSend" class="btn small primary">Send (tags them)</button><button id="tagVote" class="btn small">🗳 Vote</button><button id="tagX" class="btn small ghost">✕</button></div></div>
+  <aside id="chatPanel">
+    <div id="chatHead"><span>💬 Chat</span><button id="chatMin" title="Hide the chat so you can see the village (H)">▼ Hide chat</button></div>
+    <div id="tabs"></div>
+    <div id="msgs"></div>
+    <form id="chatForm"><input id="chatIn" maxlength="220" placeholder="Say something…" autocomplete="off"><button class="btn small primary">Send</button></form>
+  </aside>
+  <div id="journal" class="hidden"><h3>📓 Your Journal</h3><div id="jbody"></div><button class="btn small" id="jclose">Close</button></div>
+  <div id="toasts"></div>
+</section>
+
+<!-- overlays -->
+<div id="roleCard" class="overlay hidden"><div class="rc"><div class="rcInner"><div class="rcFront">?</div><div class="rcBack"><div id="rcIcon">🎭</div><h2 id="rcName">Villager</h2><p id="rcDesc"></p></div></div></div></div>
+<div id="gameover" class="overlay hidden"><div class="go card"><h1 id="goTitle"></h1><div id="goSub"></div><div id="goList"></div><div class="row two"><button id="btnAgain" class="btn primary">↺ Play Again</button><button id="btnHome" class="btn">Leave</button></div></div></div>
+<div id="conn" class="hidden">Reconnecting…</div>
+
+<script src="config.js"></script>
+<script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/examples/jsm/"}}</script>
+<script type="module" src="world3d.js"></script>
+<script type="module" src="game.js"></script>
+</body>
+</html>
